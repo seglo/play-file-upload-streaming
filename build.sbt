@@ -10,6 +10,7 @@ libraryDependencies ++= Seq(
   jdbc,
   cache,
   ws,
+  "org.scalactic" % "scalactic_2.11" % "2.2.4",
   specs2 % Test
 )
 
