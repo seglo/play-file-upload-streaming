@@ -14,7 +14,7 @@ import play.core.parsers.Multipart.PartHandler
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Success, Failure, Try}
 
-case class StreamingSuccess(filename: String)
+case class StreamingSuccess(filename: String, output: Output)
 
 /**
   * The StreamingBodyParser writes a Play Iteratee to an Output stream.  This is used so that an upload can be streamed
@@ -24,7 +24,7 @@ case class StreamingSuccess(filename: String)
 object StreamingBodyParser {
 
   // TODO: Move maxLength to a constant (another one exists in FormatterServiceImpl)
-  def streamingBodyParser(streamConstructor: String => OutputStream) = BodyParser { request =>
+  def streamingBodyParser(streamConstructor: String => Output) = BodyParser { request =>
     // Use Play's existing multipart parser from play.api.mvc.BodyParsers.
     // The RequestHeader object is wrapped here so it can be accessed in streamingFilePartHandler
     parse.multipartFormData(new StreamingBodyParser(streamConstructor).streamingFilePartHandler(request),
@@ -32,7 +32,7 @@ object StreamingBodyParser {
   }
 }
 
-class StreamingBodyParser(streamConstructor: String => OutputStream) {
+class StreamingBodyParser(streamConstructor: String => Output) {
 
   /** Custom implementation of a PartHandler, inspired by these Play mailing list threads:
     * https://groups.google.com/forum/#!searchin/play-framework/PartHandler/play-framework/WY548Je8VB0/dJkj3arlBigJ
@@ -41,9 +41,9 @@ class StreamingBodyParser(streamConstructor: String => OutputStream) {
     Multipart.handleFilePart {
       case Multipart.FileInfo(partName, filename, contentType) =>
 
-        val outputStream: OutputStream Or ErrorMessage =
+        val output: Output Or ErrorMessage =
           Try(streamConstructor(filename)) match {
-            case Success(os: OutputStream) => Good(os)
+            case Success(os: Output) => Good(os)
             case Failure(ex) => Bad(ex.getMessage)
           }
 
@@ -57,7 +57,7 @@ class StreamingBodyParser(streamConstructor: String => OutputStream) {
               // write the chunk (e) to the output Stream
               val s1 = elStep(s, data)
               // if an error occurred during output stream initialisation, set Iteratee to Done
-              outputStream match {
+              output match {
                 case Bad(msg) => Done(s, Input.EOF)
                 case _ => Cont[E, A](i => step(s1)(i))
               }
@@ -65,22 +65,22 @@ class StreamingBodyParser(streamConstructor: String => OutputStream) {
           Cont[E, A](i => step(state)(i))
         }
 
-        def elStepFun(os: OutputStream Or ErrorMessage, elDataChunk: Array[Byte]): OutputStream Or ErrorMessage = {
+        def elStepFun(os: Output Or ErrorMessage, elDataChunk: Array[Byte]): Output Or ErrorMessage = {
           os foreach { _.write(elDataChunk) }
           os
         }
 
-        val outputStreams = fold[Array[Byte], OutputStream Or ErrorMessage](outputStream)(elStepFun)
+        val outputStreams = fold[Array[Byte], Output Or ErrorMessage](output)(elStepFun)
 
         outputStreams.map { os =>
           os foreach { _.close()}
-          outputStream match {
+          output match {
             case Bad(errorMessage) =>
               Logger.error(s"Streaming the file $filename failed: $errorMessage")
               Bad(errorMessage)
-            case Good(_) =>
+            case Good(out) =>
               Logger.info(s"$filename finished streaming.")
-              Good(StreamingSuccess(filename))
+              Good(StreamingSuccess(filename, out))
           }
         }
     }

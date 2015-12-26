@@ -1,6 +1,10 @@
-import java.io.{ByteArrayOutputStream, File}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File}
+import java.math.BigInteger
+import java.nio.ByteBuffer
+import java.nio.channels.Channels
 import java.nio.charset.Charset
 import java.nio.file.{StandardOpenOption, Files, StandardCopyOption}
+import java.security.{DigestOutputStream, MessageDigest}
 
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.MultipartEntityBuilder
@@ -23,20 +27,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ApplicationSpec extends Specification {
 
   "Application" should {
-
-    "send 404 on a bad request" in new WithApplication{
-      route(FakeRequest(GET, "/boum")) must beSome.which (status(_) == NOT_FOUND)
-    }
-
-    "render the index page" in new WithApplication{
-      val home = route(FakeRequest(GET, "/")).get
-
-      status(home) must equalTo(OK)
-      contentType(home) must beSome.which(_ == "text/html")
-      contentAsString(home) must contain ("Your new application is ready.")
-    }
-
-
     /**
      * An ugly way to create multipartFormData using Apache HTTP MultipartEntityBuilder.
      *
@@ -87,7 +77,7 @@ class ApplicationSpec extends Specification {
     }
 
 
-    "upload a test file" in new WithApplication {
+    "upload a test file successfully" in new WithApplication {
       val tempFile = TemporaryFile("TEST_")
       val fileRef = tempFile.file
 
@@ -95,11 +85,81 @@ class ApplicationSpec extends Specification {
 
       val parameters = Map("foo" -> "bar")
 
-      val future = sendUploadRequest(controllers.routes.Application.upload().url, fileRef, "application/json", parameters)
+      val future = sendUploadRequest(controllers.routes.Application.uploadToBytes().url, fileRef, "application/json", parameters)
 
       status(future) ==== OK
       contentAsString(future) must beMatching("File TEST_REMOVE_[0-9]+ successfully streamed.")
     }
+
+    "upload a test file and get its MD5 hash" in new WithApplication {
+      val tempFile = TemporaryFile("TEST_")
+      val fileRef = tempFile.file
+
+      Files.write(fileRef.toPath, """{"hello":"world"}""".getBytes, StandardOpenOption.WRITE)
+
+      val parameters = Map("foo" -> "bar")
+
+      val future = sendUploadRequest(controllers.routes.Application.uploadToHash().url, fileRef, "application/json", parameters)
+
+      status(future) ==== OK
+      contentAsString(future) must beMatching("File TEST_REMOVE_[0-9]+ successfully streamed.  Hash: 334645069913620745014919525874457631478")
+    }
+
+//    "md5 hash of output stream" in {
+//
+//
+////      val md5Digest = MessageDigest.getInstance("MD5")
+////      val outStream = Channels.newChannel(
+////        new DigestOutputStream(new ByteArrayOutputStream(), md5Digest))
+////
+////      //val in = Channels.newChannel(new ByteArrayInputStream("hello world".getBytes()))
+////      val buffer = ByteBuffer.allocate(1024 * 1024)
+////      in.read(buffer)
+////      out.write(buffer)
+////
+////      val md5Actual = new BigInteger(1, md5Digest.digest())
+////      println(md5Actual)
+//
+//
+//      val in = Channels.newChannel(new ByteArrayInputStream("hello world".getBytes))
+//      val md5Digest = MessageDigest.getInstance("MD5")
+//      val out = Channels.newChannel(
+//        new DigestOutputStream(new ByteArrayOutputStream(), md5Digest))  // new
+//      val buffer: ByteBuffer = ByteBuffer.allocate(1024 * 1024) // 1 MB
+//
+//      while (in.read(buffer) != -1) {
+//        buffer.flip()
+//        //md5Digest.update(buffer.asReadOnlyBuffer());  // old
+//        out.write(buffer)
+//        buffer.clear()
+//      }
+//
+//      val md5Actual = new BigInteger(1, md5Digest.digest())
+//
+//      println(s"md5: $md5Actual")
+//      success
+//    }
+//
+//    "md5 hash of output stream 2" in {
+//      val in = Channels.newChannel(new ByteArrayInputStream("hello world".getBytes))
+//      val md5Digest = MessageDigest.getInstance("MD5")
+//      val out = Channels.newChannel(
+//        new DigestOutputStream(new ByteArrayOutputStream(), md5Digest))  // new
+//      val buffer: ByteBuffer = ByteBuffer.allocate(1024 * 1024) // 1 MB
+//
+//      while (in.read(buffer) != -1) {
+//        buffer.flip()
+//        //md5Digest.update(buffer.asReadOnlyBuffer());  // old
+//        out.write(buffer)
+//        buffer.clear()
+//      }
+//
+//      val md5Actual = new BigInteger(1, md5Digest.digest())
+//
+//      println(s"md5: $md5Actual")
+//      success
+//    }
+//
 
   }
 }
