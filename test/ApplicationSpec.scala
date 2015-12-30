@@ -5,6 +5,7 @@ import java.nio.channels.Channels
 import java.nio.charset.Charset
 import java.nio.file.{StandardOpenOption, Files, StandardCopyOption}
 import java.security.{DigestOutputStream, MessageDigest}
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.MultipartEntityBuilder
@@ -85,81 +86,10 @@ class ApplicationSpec extends Specification {
 
       val parameters = Map("foo" -> "bar")
 
-      val future = sendUploadRequest(controllers.routes.Application.uploadToBytes().url, fileRef, "application/json", parameters)
-
-      status(future) ==== OK
-      contentAsString(future) must beMatching("File TEST_REMOVE_[0-9]+ successfully streamed.")
-    }
-
-    "upload a test file and get its MD5 hash" in new WithApplication {
-      val tempFile = TemporaryFile("TEST_")
-      val fileRef = tempFile.file
-
-      Files.write(fileRef.toPath, """{"hello":"world"}""".getBytes, StandardOpenOption.WRITE)
-
-      val parameters = Map("foo" -> "bar")
-
       val future = sendUploadRequest(controllers.routes.Application.uploadToHash().url, fileRef, "application/json", parameters)
 
       status(future) ==== OK
-      contentAsString(future) must beMatching("File TEST_REMOVE_[0-9]+ successfully streamed.  Hash: 334645069913620745014919525874457631478")
+      contentAsString(future) ==== "FBC24BCC7A1794758FC1327FCFEBDAF6"
     }
-
-//    "md5 hash of output stream" in {
-//
-//
-////      val md5Digest = MessageDigest.getInstance("MD5")
-////      val outStream = Channels.newChannel(
-////        new DigestOutputStream(new ByteArrayOutputStream(), md5Digest))
-////
-////      //val in = Channels.newChannel(new ByteArrayInputStream("hello world".getBytes()))
-////      val buffer = ByteBuffer.allocate(1024 * 1024)
-////      in.read(buffer)
-////      out.write(buffer)
-////
-////      val md5Actual = new BigInteger(1, md5Digest.digest())
-////      println(md5Actual)
-//
-//
-//      val in = Channels.newChannel(new ByteArrayInputStream("hello world".getBytes))
-//      val md5Digest = MessageDigest.getInstance("MD5")
-//      val out = Channels.newChannel(
-//        new DigestOutputStream(new ByteArrayOutputStream(), md5Digest))  // new
-//      val buffer: ByteBuffer = ByteBuffer.allocate(1024 * 1024) // 1 MB
-//
-//      while (in.read(buffer) != -1) {
-//        buffer.flip()
-//        //md5Digest.update(buffer.asReadOnlyBuffer());  // old
-//        out.write(buffer)
-//        buffer.clear()
-//      }
-//
-//      val md5Actual = new BigInteger(1, md5Digest.digest())
-//
-//      println(s"md5: $md5Actual")
-//      success
-//    }
-//
-//    "md5 hash of output stream 2" in {
-//      val in = Channels.newChannel(new ByteArrayInputStream("hello world".getBytes))
-//      val md5Digest = MessageDigest.getInstance("MD5")
-//      val out = Channels.newChannel(
-//        new DigestOutputStream(new ByteArrayOutputStream(), md5Digest))  // new
-//      val buffer: ByteBuffer = ByteBuffer.allocate(1024 * 1024) // 1 MB
-//
-//      while (in.read(buffer) != -1) {
-//        buffer.flip()
-//        //md5Digest.update(buffer.asReadOnlyBuffer());  // old
-//        out.write(buffer)
-//        buffer.clear()
-//      }
-//
-//      val md5Actual = new BigInteger(1, md5Digest.digest())
-//
-//      println(s"md5: $md5Actual")
-//      success
-//    }
-//
-
   }
 }

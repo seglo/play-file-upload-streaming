@@ -4,8 +4,6 @@
 
 # Home page
 GET         /                     controllers.Application.index
-#POST        /uploadToFile        controllers.Application.uploadToFile
-POST        /uploadToBytes        controllers.Application.uploadToBytes
 POST        /uploadToHash         controllers.Application.uploadToHash
 
 

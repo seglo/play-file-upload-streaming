@@ -1,30 +1,13 @@
 package controllers
 
-import java.io.{OutputStream, ByteArrayOutputStream, FileOutputStream, File}
-import java.math.BigInteger
-import java.nio.channels.Channels
+import java.io.{ByteArrayOutputStream, OutputStream}
 import java.security.{DigestOutputStream, MessageDigest}
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 
-import org.scalactic.{Bad, Good}
-import play.api._
+import controllers.StreamingBodyParser._
 import play.api.mvc._
-import StreamingBodyParser._
 
-trait Output {
-  def write(bytes: Array[Byte]): Unit
-  def close(): Unit
-}
-
-case class SimpleOutput(os: OutputStream) extends Output {
-  def write(bytes: Array[Byte]): Unit = os.write(bytes)
-  def close() = os.close()
-}
-
-case class Md5StreamOutput(os: OutputStream, md: MessageDigest) extends Output {
-  def write(bytes: Array[Byte]): Unit = os.write(bytes)
-  def close() = os.close()
-  def getHash = new BigInteger(1, md.digest())
-}
+import scala.util.{Failure, Success}
 
 class Application extends Controller {
   val welcomeMsg = "Demonstration of Streaming File Upload for Play 2.4"
@@ -33,46 +16,30 @@ class Application extends Controller {
     Ok(views.html.index(welcomeMsg))
   }
 
-  /** Higher-order function that accepts the unqualified name of the file to stream to and returns the output stream
-    * for the new file. This example streams to a file, but streaming to any OutputStream will work */
-  def streamConstructorFile(filename: String): Output = {
-    val dir = new File(sys.env("HOME"), "uploadedFiles")
-    dir.mkdirs()
-    SimpleOutput(new FileOutputStream(new File(dir, filename)))
-  }
-
-  def uploadToFile = Action(streamingBodyParser(streamConstructorFile)){ request =>
-    val params = request.body.asFormUrlEncoded // you can extract request parameters for whatever your app needs
-    val result = request.body.files.head.ref
-    result match {
-      case Good(res) => Ok(s"File ${res.filename} successfully streamed.")
-      case Bad(msg) => Ok(s"Streaming error occurred: $msg")
-    }
-  }
-
-  def streamConstructorBytes(filename: String) = SimpleOutput(new ByteArrayOutputStream())
-
-  def uploadToBytes = Action(streamingBodyParser(streamConstructorBytes)){ request =>
-    val params = request.body.asFormUrlEncoded // you can extract request parameters for whatever your app needs
-    val result = request.body.files.head.ref
-    result match {
-      case Good(res) => Ok(s"File ${res.filename} successfully streamed.")
-      case Bad(msg) => Ok(s"Streaming error occurred: $msg")
-    }
-  }
-
+  /**
+   * Higher-order function that accepts the unqualified name of the file to stream to and returns the output stream
+   * for the new file. This example streams to a file, but streaming to any OutputStream will work
+   * @param filename The filename is provided by the Play! Multipart form handler
+   * @return A type that implements an Output trait.
+   **/
   def streamConstructorHashBytes(filename: String) = {
     val md5Digest = MessageDigest.getInstance("MD5")
     Md5StreamOutput(new DigestOutputStream(new ByteArrayOutputStream(), md5Digest), md5Digest)
   }
 
+  /**
+   * Return the MD5 hash of the uploaded file.
+   *
+   * The action takes our custom body parser (StreamingBodyParser) with the HOF that returns the OutputStream.  We
+   * created an Md5StreamOutput that uses a DigestOutputStream calculate an MD5 digest.
+   * @return An MD5 hash.
+   */
   def uploadToHash = Action(streamingBodyParser(streamConstructorHashBytes)){ request =>
     val params = request.body.asFormUrlEncoded // you can extract request parameters for whatever your app needs
     val result = request.body.files.head.ref
     result match {
-      case Good(StreamingSuccess(filename, out: Md5StreamOutput)) =>
-        Ok(s"File $filename successfully streamed.  Hash: ${out.getHash}")
-      case Bad(msg) => Ok(s"Streaming error occurred: $msg")
+      case Success(StreamingSuccess(filename, out: Md5StreamOutput)) => Ok(out.getHash)
+      case Failure(ex) => Ok(s"Streaming error occurred: ${ex.getMessage}")
     }
   }
 }
