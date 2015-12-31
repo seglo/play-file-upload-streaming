@@ -1,8 +1,7 @@
 package controllers
 
-import java.io.{ByteArrayOutputStream, OutputStream}
+import java.io.ByteArrayOutputStream
 import java.security.{DigestOutputStream, MessageDigest}
-import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 
 import controllers.StreamingBodyParser._
 import play.api.mvc._
@@ -22,7 +21,7 @@ class Application extends Controller {
    * @param filename The filename is provided by the Play! Multipart form handler
    * @return A type that implements an Output trait.
    **/
-  def streamConstructorHashBytes(filename: String) = {
+  def streamProviderHashBytes(filename: String) = {
     val md5Digest = MessageDigest.getInstance("MD5")
     Md5StreamOutput(new DigestOutputStream(new ByteArrayOutputStream(), md5Digest), md5Digest)
   }
@@ -34,7 +33,7 @@ class Application extends Controller {
    * created an Md5StreamOutput that uses a DigestOutputStream calculate an MD5 digest.
    * @return An MD5 hash.
    */
-  def uploadToHash = Action(streamingBodyParser(streamConstructorHashBytes)){ request =>
+  def uploadToHash = Action(streamingBodyParser(streamProviderHashBytes)){ request =>
     val params = request.body.asFormUrlEncoded // you can extract request parameters for whatever your app needs
     val result = request.body.files.head.ref
     result match {
