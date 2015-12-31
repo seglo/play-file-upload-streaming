@@ -1,26 +1,32 @@
-Streaming HTTP file upload demo for Play 2.4
-============================================
+# Play File Upload Iteratee to Java OutputStream
 
+[![Build Status](https://travis-ci.org/seglo/play-iteratee-to-outputstream.svg?branch=master)](https://travis-ci.
+org/seglo/play-iteratee-to-outputstream)
 
+> A Play demo with tests that generates an MD5 hash for any file uploaded.
 
-This small demo shows how large files can be copied from client to a destination without requiring any temporary files,
-and only requires a minimal memory footprint. For example, FireFox sends 8KB chunks when uploading files, so only a
-few chunks would be held in memory for each client performing a transfer.
+This is a small demo that demonstrates writing a Play `Iteratee` to an arbitrary `OutputStream`. For the purpose of the demo this project will generate an MD5 hash of any file you upload to `uploadToHash` Play Action.
 
-Large uploads, such as movies, should not be completely buffered by the Play app before copying the data to the
-destination. The [Play 2.1 Iteratee examples](http://www.playframework.com/documentation/2.1.0/ScalaFileUpload) for
-doing file upload do not explain how to use small in-memory buffers to stream an upload from the client to a
-destination.
+For more information on how this demo works see the accompany blog post: [Play File Upload Iteratee to Java OutputStream]().
 
-This demo streams a File upload to a local file; you could easily modify this example to stream elsewhere, such as
-AWS S3 using the [AWS Java SDK](http://aws.amazon.com/documentation/sdkforjava/).
+This project was re-factored from Mike Slinn's `play21-file-upload-streaming` repo, [https://github.com/mslinn/play21-file-upload-streaming](https://github.com/mslinn/play21-file-upload-streaming)
 
-Just clone the repo and run it with Play on your local machine:
-<pre>play debug run</pre>
+## Run & Testing
 
-You can upload using curl instead of the web browser. Thanks to Andrew Gaydenko for the incantation:
-<pre>curl -i --no-keepalive -F name=myFile.mp4 -F filedata=@myFile.mp4 http://localhost:9000/upload</pre>
+To run the demo locally run `sbt run`
 
-Files are uploaded to ~/uploadedFiles.
+To run tests run `sbt test`
 
-You'll find inline comments in the code.
+## Call endpoint with curl
+
+```bash
+$ curl -i --no-keepalive -F name=spark-1.3.0-bin-hadoop2.4.tgz -F filedata=@/home/seglo/Downloads/spark-1.3.0-bin-hadoop2.4.tgz http://localhost:9000/uploadToHash
+HTTP/1.1 100 Continue
+
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Date: Thu, 31 Dec 2015 22:30:24 GMT
+Content-Length: 32
+
+20DFFD5254A2B7E57B76A488CAB40CD8
+```
