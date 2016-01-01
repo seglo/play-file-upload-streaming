@@ -2,9 +2,9 @@
 
 [![Build Status](https://travis-ci.org/seglo/play-iteratee-to-outputstream.svg?branch=master)](https://travis-ci.org/seglo/play-iteratee-to-outputstream)
 
-> A Play demo with tests that generates an MD5 hash for any file uploaded.
+> A Play demo project that generates an MD5 hash for any file uploaded.
 
-This is a small demo that demonstrates writing a Play `Iteratee` to an arbitrary `OutputStream`. For the purpose of the demo this project will generate an MD5 hash of any file you upload to `uploadToHash` Play Action.
+This is a small demo that demonstrates writing a Play `Iteratee` to an arbitrary `OutputStream`. This project will generate an MD5 hash of any file you upload to `uploadToHash` Play Action.
 
 For more information on how this demo works see the accompany blog post: [Play File Upload Iteratee to Java OutputStream]().
 
