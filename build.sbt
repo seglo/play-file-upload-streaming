@@ -1,4 +1,4 @@
-name := """play-iteratee-to-outputstream"""
+name := """play-file-upload-streaming"""
 
 version := "1.0-SNAPSHOT"
 
