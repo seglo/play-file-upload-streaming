@@ -43,7 +43,7 @@ object StreamingBodyParser {
               os
             }
             done map { output =>
-              output.close()
+              Try(output.close())
               Logger.info(s"$filename finished streaming.")
               Success(StreamingSuccess(filename, output))
             }
